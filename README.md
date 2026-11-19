@@ -23,6 +23,10 @@ El programa no formatea, no reinstala Windows y no sustituye la instalación de 
 
 Algunos cambios reinician Explorer y pueden cerrar sus ventanas. Guarda tu trabajo antes de aplicar ajustes. El punto de restauración depende de Protección del sistema y no equivale a una copia completa de tus archivos. [Restaurar sistema: Microsoft](https://support.microsoft.com/en-us/windows/experience/backup-recovery/system-restore).
 
+## Descargar
+
+[Descargar la versión preliminar para Windows](https://github.com/jimmyfabian26-sys/jd-dev-windows-setup/releases).
+
 ## Ejecutar el código
 
 Requiere Windows, Python 3.10 o posterior con Tkinter y permisos de administrador para aplicar los cambios.
