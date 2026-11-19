@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="engrane.ico" width="100" height="100" alt="Icono original de engranaje de J.D DEV Windows Setup" />
+<img src="engrane.ico" width="112" height="112" alt="Icono original de J.D DEV Windows Setup" />
 
 # ⚙️ J.D DEV — Windows Setup
 
@@ -9,9 +9,11 @@
 Una interfaz gráfica para aplicar ajustes elegidos por el usuario, con confirmaciones y comprobación de puntos de restauración.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Lenguaje](https://img.shields.io/badge/Lenguaje-Python-3776AB?logo=python&logoColor=white)
 ![Tkinter](https://img.shields.io/badge/Interfaz-Tkinter-2D774B)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows11&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-Administraci%C3%B3n-5391FE?logo=powershell&logoColor=white)
+![Registro de Windows](https://img.shields.io/badge/Sistema-Registro_de_Windows-0078D4)
 ![PyInstaller](https://img.shields.io/badge/Empaquetado-PyInstaller-245CC7)
 ![Versión](https://img.shields.io/badge/Versi%C3%B3n-v0.1.0%20preliminar-E39B20)
 [![Pruebas](https://github.com/jimmyfabian26-sys/jd-dev-windows-setup/actions/workflows/checks.yml/badge.svg)](https://github.com/jimmyfabian26-sys/jd-dev-windows-setup/actions/workflows/checks.yml)
@@ -26,6 +28,16 @@ Una interfaz gráfica para aplicar ajustes elegidos por el usuario, con confirma
 
 > [!WARNING]
 > **Versión preliminar de pruebas.** Los controles de seguridad tienen pruebas automatizadas con operaciones simuladas. Los ajustes del sistema aún necesitan validación en máquinas virtuales y distintas versiones de Windows. El ejecutable no está firmado digitalmente.
+
+## 📑 Contenido
+
+- [Tecnologías y lenguajes](#️-tecnologías-utilizadas)
+- [Cuándo utilizarla](#-cuándo-utilizarla)
+- [Funciones y seguridad](#-funcionalidades-principales)
+- [Descargar la versión preliminar](#-descargar-la-versión-preliminar)
+- [Ejecutar desde el código](#-ejecutar-desde-el-código-fuente)
+- [Compilar y ejecutar pruebas](#️-compilar-el-ejecutable)
+- [Estado y próximas mejoras](#️-estado-del-proyecto-y-próximas-mejoras)
 
 ## 🛠️ Tecnologías utilizadas
 
@@ -61,9 +73,15 @@ J.D DEV Windows Setup reúne en una sola aplicación opciones de apariencia y aj
 
 Algunos cambios reinician Explorer y pueden cerrar sus ventanas. Guarda tu trabajo antes de aplicar ajustes. El punto de restauración depende de Protección del sistema y no equivale a una copia completa de tus archivos. [Restaurar sistema: Microsoft](https://support.microsoft.com/en-us/windows/experience/backup-recovery/system-restore).
 
+## 🖼️ Identidad visual
+
+El encabezado utiliza el icono `engrane.ico` incluido en el repositorio. La interfaz y el ejecutable usan la marca **J.D DEV**.
+
 ## 📦 Descargar la versión preliminar
 
-[Descargar la versión preliminar para Windows](https://github.com/jimmyfabian26-sys/jd-dev-windows-setup/releases).
+[**Descargar J.D DEV Windows Setup v0.1.0**](https://github.com/jimmyfabian26-sys/jd-dev-windows-setup/releases/tag/v0.1.0) · [Ver todas las versiones](https://github.com/jimmyfabian26-sys/jd-dev-windows-setup/releases).
+
+La publicación incluye el ejecutable y un archivo de sumas SHA-256 para comprobar la integridad de la descarga. Es una **versión preliminar**, no una versión estable.
 
 ## 🚀 Ejecutar desde el código fuente
 
