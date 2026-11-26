@@ -3,6 +3,7 @@ import ast
 from pathlib import Path
 from types import SimpleNamespace
 import threading
+import sys
 import unittest
 from unittest.mock import Mock, patch
 
@@ -78,12 +79,100 @@ class SetupTests(unittest.TestCase):
         self.app.run_and_collapse(action)
         action.assert_called_once()
 
-    def test_no_hay_cuenta_regresiva_y_marca_completa(self):
-        self.assertNotIn('auto_start', SOURCE)
+    def test_marca_classic(self):
+        self.assertIn("ascii_logo", SOURCE)
+        self.assertIn("██", SOURCE)
+        self.assertIn("▀", SOURCE)
+        self.assertIn("▄", SOURCE)
+        self.assertIn("center_logo", SOURCE)
         self.assertNotIn('PCMATIC', SOURCE.upper())
         self.assertNotIn('PC MATIC', SOURCE.upper())
-        self.assertIn('text="J.D DEV"', SOURCE)
+        self.assertIn("CLASSIC EDITION", SOURCE.upper())
         self.assertIn('RECOMENDADO DESPUÉS DE REINSTALAR WINDOWS', SOURCE)
+
+    def setup_countdown(self):
+        self.app.countdown_state = 'ready'
+        self.app.countdown_remaining = 5
+        self.app.countdown_job = None
+        self.app.countdown_label = Mock()
+        self.app.countdown_pause_btn = Mock()
+        self.app.countdown_cancel_btn = Mock()
+        self.app.root.after = Mock(return_value='timer')
+        self.app.root.after_cancel = Mock()
+        self.app.begin_countdown()
+
+    def test_countdown_pause_resume(self):
+        self.setup_countdown()
+        self.app.countdown_tick()
+        self.assertEqual(self.app.countdown_remaining, 4)
+        self.app.toggle_countdown()
+        self.app.root.after_cancel.assert_called_once_with('timer')
+        self.assertEqual(self.app.countdown_state, 'paused')
+        self.app.toggle_countdown()
+        self.assertEqual(self.app.countdown_state, 'running')
+        self.assertEqual(self.app.countdown_remaining, 4)
+
+    def test_countdown_cancel(self):
+        self.setup_countdown()
+        self.app.cancel_countdown()
+        self.app.countdown_tick()
+        self.assertEqual(self.app.countdown_state, 'cancelled')
+        self.thread.assert_not_called()
+        self.dialogs.askyesno.assert_not_called()
+
+    def test_countdown_expiration_requires_confirmation(self):
+        self.setup_countdown()
+        for _ in range(5):
+            self.app.countdown_tick()
+        self.assertEqual(self.app.countdown_state, 'finished')
+        self.dialogs.askyesno.assert_called_once()
+        self.thread.assert_not_called()
+
+    def test_manual_action_cancels_countdown(self):
+        self.setup_countdown()
+        self.app.config_completa()
+        self.assertEqual(self.app.countdown_state, 'cancelled')
+        self.thread.assert_not_called()
+
+    def test_cyberpunk_widgets_present(self):
+        for marker in ('neon_frame', 'header_canvas', '#ff518b', '#35ff6b'):
+            self.assertIn(marker, SOURCE)
+
+
+@unittest.skipUnless(sys.platform == 'win32', 'Interfaz nativa de Windows')
+class CyberInterfaceTests(unittest.TestCase):
+    def test_interface_controls_without_system_changes(self):
+        import tkinter as tk
+        from ConfiguracionAutomatica import JDDevWindowsSetup
+        try:
+            root = tk.Tk()
+        except tk.TclError as exc:
+            self.skipTest(f'No hay escritorio gráfico disponible: {exc}')
+        try:
+            with patch.object(JDDevWindowsSetup, 'check_admin', return_value=True), \
+                 patch.object(JDDevWindowsSetup, 'get_system_info', return_value={'version':'22H2','build':'19045','cpu':'CPU simulada','threads':4}), \
+                 patch.object(JDDevWindowsSetup, 'check_windows_11', return_value=False), \
+                 patch.object(JDDevWindowsSetup, 'crear_restauracion') as restore:
+                app = JDDevWindowsSetup(root)
+                root.geometry('960x660')
+                root.update()
+                self.assertGreater(app.header_canvas.winfo_width(), 100)
+                self.assertGreater(app.console.winfo_height(), 60)
+                app.countdown_pause_btn.invoke()
+                self.assertEqual(app.countdown_state, 'paused')
+                app.countdown_pause_btn.invoke()
+                self.assertEqual(app.countdown_state, 'running')
+                app.countdown_cancel_btn.invoke()
+                root.update()
+                self.assertEqual(app.countdown_state, 'cancelled')
+                app.btn_advanced.invoke()
+                root.update()
+                self.assertTrue(app.advanced_visible)
+                app.btn_advanced.invoke()
+                self.assertFalse(app.advanced_visible)
+                restore.assert_not_called()
+        finally:
+            root.destroy()
 
 
 if __name__ == '__main__':

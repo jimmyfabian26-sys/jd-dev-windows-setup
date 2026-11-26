@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-J.D DEV - Configuración Inteligente v4.0
+J.D DEV - Windows Setup v0.2.0 Classic Edition
 Aplicación Python para optimización de Windows 10/11
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+from tkinter import font as tkfont
 import subprocess
 import os
 import sys
@@ -34,25 +35,23 @@ logging.basicConfig(
 class JDDevWindowsSetup:
     def __init__(self, root):
         self.root = root
-        self.root.title("J.D DEV - Configuración Inteligente")
+        self.root.title("J.D DEV - Configuración Inteligente · Classic Edition")
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
 
-        if screen_w <= 1366:
-            self.ui_scale = 0.85
-            self.window_size = "820x580"
-        elif screen_w <= 1600:
-            self.ui_scale = 0.95
-            self.window_size = "880x620"
-        else:
-            self.ui_scale = 1.0
-            self.window_size = "900x640"
+        self.ui_scale = 0.9 if screen_w <= 1366 else 1.0
+        window_w = min(1160, max(760, screen_w - 70))
+        window_h = min(760, max(540, screen_h - 110))
+        self.window_size = f"{window_w}x{window_h}"
 
         self.root.geometry(self.window_size)
-        self.root.tk.call('tk', 'scaling', self.ui_scale)
-        self.root.configure(bg='#0a192f')
-        self.root.resizable(False, False)
+        self.root.configure(bg='#040b18')
+        self.root.resizable(True, True)
+        self.root.minsize(760, 540)
         self.running = False
+        self.countdown_remaining = 5
+        self.countdown_state = "ready"
+        self.countdown_job = None
 
         # Variables de estado
         self.is_admin = self.check_admin()
@@ -69,144 +68,266 @@ class JDDevWindowsSetup:
         logging.info(f"Aplicación iniciada - Windows 11: {self.is_windows_11}")
         if not self.is_admin:
             self.request_admin()
+        else:
+            self.begin_countdown()
+        self.root.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def setup_styles(self):
-        """Configurar estilos modernos"""
         self.colors = {
-            'bg': '#0a192f',
-            'fg': '#64ffda',
-            'accent': '#112240',
-            'text': '#ccd6f6',
-            'warning': '#ff6b6b',
-            'success': '#00d9ff'
+            'bg': '#040b18', 'fg': '#75ecff', 'accent': '#081c32',
+            'text': '#e0ecfa', 'warning': '#ff9cbe', 'success': '#00e5ff',
+            'border': '#17d9f3', 'yellow': '#ffe34d',
         }
-
-        style = ttk.Style()
+        style = ttk.Style(self.root)
         style.theme_use('clam')
-
-        style.configure(
-            'Custom.TButton',
-            background=self.colors['accent'],
-            foreground=self.colors['fg'],
-            font=('Segoe UI', 12, 'bold'),
-            padding=10
-        )
-
-        style.configure(
-            'Custom.TFrame',
-            background=self.colors['bg']
-        )
+        style.configure('Cyber.Horizontal.TProgressbar', troughcolor='#071a2d',
+                        background='#00d9ff', bordercolor='#123d60',
+                        lightcolor='#00d9ff', darkcolor='#087ba3', thickness=5)
 
     def create_ui(self):
-        main_frame = tk.Frame(self.root, bg=self.colors['bg'])
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        main_frame = tk.Frame(self.root, bg=self.colors['bg'],
+                              highlightthickness=1, highlightbackground='#0b91b2')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         self.main_frame = main_frame
-
         self.create_header(main_frame)
-        self.create_usage_notice(main_frame)
+        self.create_countdown_panel(main_frame)
         self.create_system_info(main_frame)
 
-        content_frame = tk.Frame(main_frame, bg=self.colors['bg'])
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=20)
+        footer = tk.Frame(main_frame, bg='#081c32', highlightthickness=1,
+                          highlightbackground='#147ca5', padx=9, pady=3)
+        footer.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(3, 8))
+        self.status_label = tk.Label(
+            footer, text="Listo. Esperando inicio automático…", bg='#081c32',
+            fg='#e0ecfa', font=('Segoe UI', 10), anchor=tk.W)
+        self.status_label.pack(fill=tk.X)
+        self.progress_var = tk.DoubleVar()
+        self.progress = ttk.Progressbar(footer, variable=self.progress_var,
+            maximum=100, mode='determinate', style='Cyber.Horizontal.TProgressbar')
+        self.progress.pack(fill=tk.X, pady=(2, 0))
+        self.create_usage_notice(main_frame)
 
+        content_frame = tk.Frame(main_frame, bg=self.colors['bg'])
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(5, 2))
+        content_frame.grid_columnconfigure(0, weight=47, uniform='panel')
+        content_frame.grid_columnconfigure(1, weight=53, uniform='panel')
+        content_frame.grid_rowconfigure(0, weight=1)
         self.create_menu_panel(content_frame)
         self.create_console_panel(content_frame)
 
-        self.progress_var = tk.DoubleVar()
-        self.progress = ttk.Progressbar(
-            main_frame,
-            variable=self.progress_var,
-            maximum=100,
-            length=860,
-            mode='determinate'
-        )
-        self.progress.pack(pady=10)
-
-        self.status_label = tk.Label(
-            main_frame,
-            text="Listo",
-            bg=self.colors['bg'],
-            fg=self.colors['text'],
-            font=('Consolas', 9),
-            anchor=tk.W
-        )
-        self.status_label.pack(fill=tk.X)
-
     def create_usage_notice(self, parent):
-        notice = tk.Frame(parent, bg=self.colors['accent'], padx=14, pady=10)
-        notice.pack(fill=tk.X, pady=(0, 12))
-        tk.Label(notice, text="RECOMENDADO DESPUÉS DE REINSTALAR WINDOWS",
-                 bg=self.colors['accent'], fg=self.colors['fg'],
-                 font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W)
-        tk.Label(notice, text="Instala controladores y actualizaciones primero. Elige los ajustes antes de aplicarlos.",
-                 bg=self.colors['accent'], fg=self.colors['text'],
-                 font=('Segoe UI', 10), wraplength=740, justify=tk.LEFT).pack(anchor=tk.W, pady=(4, 0))
+        tk.Label(parent, text="RECOMENDADO DESPUÉS DE REINSTALAR WINDOWS · Instala controladores y actualizaciones primero.",
+                 bg=self.colors['bg'], fg='#82a7bc', font=('Segoe UI', 8),
+                 anchor=tk.W).pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(1, 2))
+
+    def neon_frame(self, parent, title, height=0, border='#16cde8', fill='#081c32'):
+        """Canvas decorativo; los controles del interior siguen siendo widgets nativos."""
+        panel = tk.Canvas(parent, bg=self.colors['bg'], highlightthickness=0,
+                          bd=0, height=height or 80, width=1)
+        body = tk.Frame(panel, bg=fill, bd=0)
+        top = 29 if title else 9
+        body.place(x=10, y=top, relwidth=1, width=-20, relheight=1, height=-top-8)
+
+        def paint(event):
+            w, h = event.width, event.height
+            if w < 30 or h < 35:
+                return
+            panel.delete('decoration')
+            cut = 10
+            points = (2, cut+2, cut+2, 2, w-cut-2, 2, w-2, cut+2,
+                      w-2, h-cut-2, w-cut-2, h-2, cut+2, h-2, 2, h-cut-2)
+            panel.create_polygon(points, fill=fill, outline='#103752',
+                                 width=5, tags='decoration')
+            panel.create_polygon(points, fill=fill, outline=border,
+                                 width=1, tags='decoration')
+            if title:
+                panel.create_text(15, 14, text=title, anchor='w',
+                                  font=('Segoe UI', 10, 'bold'), fill='#75ecff',
+                                  tags='decoration')
+                panel.create_line(5, 25, w-5, 25, fill='#14577a', tags='decoration')
+            panel.tag_lower('decoration')
+
+        panel.bind('<Configure>', paint)
+        return panel, body
 
     def create_header(self, parent):
-        """Crear header con logo"""
-        header = tk.Frame(parent, bg=self.colors['bg'])
-        header.pack(fill=tk.X, pady=(0, 20))
-
-        logo_label = tk.Label(
-            header, text="J.D DEV", bg=self.colors['bg'],
-            fg=self.colors['success'], font=('Segoe UI', int(34 * self.ui_scale), 'bold')
+        """Paisaje synthwave generado con Canvas; el logotipo es texto Unicode."""
+        header = tk.Canvas(parent, bg='#030a1b', height=146,
+                           highlightthickness=0, bd=0)
+        header.pack(fill=tk.X, padx=3)
+        self.header_canvas = header
+        # Half-blocks encode two square pixels per text row. Keep fixed spacing.
+        glyphs = (
+            "   ▀▀██      ██▀▀█▄        ██▀▀█▄   ██▀▀▀▀▀  ██   ██",
+            "     ██      ██   ██       ██   ██  ██▄▄▄▄   ██   ██",
+            "██   ██  ▄▄  ██  ▄█▀       ██  ▄█▀  ██        ▀█▄█▀ ",
+            " ▀▀▀▀▀   ▀▀  ▀▀▀▀▀         ▀▀▀▀▀    ▀▀▀▀▀▀▀     ▀   ",
         )
-        logo_label.pack()
+        ascii_logo = "\n".join(glyphs)
+        self.logo_font = tkfont.Font(family='Consolas', size=-15, weight='bold')
+        os_name = 'Windows 11' if self.is_windows_11 else 'Windows 10'
 
-        subtitle = tk.Label(
-            header,
-            text=f"WINDOWS SETUP · {'Windows 11' if self.is_windows_11 else 'Windows 10'} Detectado",
-            bg=self.colors['bg'],
-            fg=self.colors['fg'],
-            font=('Segoe UI', 12)
-        )
-        subtitle.pack()
+        def center_logo(event):
+            w, h = event.width, event.height
+            header.delete('all')
+            # Cielo nocturno, estrellas, sol pixelado, montañas y cuadrícula.
+            colors = ('#03091a', '#050d25', '#09102c', '#111638', '#181c43')
+            for i, color in enumerate(colors):
+                y0 = round(i*h/len(colors))
+                y1 = round((i+1)*h/len(colors))
+                header.create_rectangle(0, y0, w, y1, fill=color, outline='')
+            for i in range(42):
+                x = (i*137+23) % max(1,w)
+                y = (i*31+7) % max(1,int(h*0.65))
+                c = '#275276' if i%3 else '#49a8c4'
+                header.create_rectangle(x,y,x+1+(i%2),y+1,fill=c,outline='')
+            sx, sy, r = int(w*0.135), int(h*0.46), int(h*0.29)
+            for dy in range(-r,r+1,3):
+                half = int(max(0,r*r-dy*dy)**0.5)
+                if dy > 0 and (dy//3)%3 == 2:
+                    continue
+                col = '#00d9ee' if dy<0 else ('#4392d9' if dy<r/2 else '#a65acf')
+                header.create_rectangle(sx-half,sy+dy,sx+half,sy+dy+3,fill=col,outline='')
+            horizon = int(h*0.82)
+            header.create_polygon(0,horizon, w*.08,h*.58,w*.15,h*.76,
+                w*.22,h*.51,w*.32,h*.80,w*.45,h*.66,w*.54,h*.79,
+                w*.68,h*.58,w*.76,h*.76,w*.84,h*.49,w*.94,h*.72,w,h*.64,w,h,
+                0,h,fill='#07162f',outline='#142c51')
+            for side in (0,1):
+                for i in range(7):
+                    x = 8+i*17 if side==0 else w-21-i*17
+                    bw = 11+i%3*3
+                    bh = 13+(i*19+side*9)%48
+                    top = horizon-bh
+                    header.create_rectangle(x,top,x+bw,horizon,fill='#040b1c',outline='#112c4d')
+                    for yy in range(top+5,horizon-3,8):
+                        header.create_rectangle(x+3,yy,x+5,yy+3,
+                            fill='#008fbf' if (i+yy)%3 else '#b54ace',outline='')
+            header.create_rectangle(0,horizon,w,h,fill='#071126',outline='')
+            for i in range(13):
+                header.create_line(w/2+(i-6)*w*.027,horizon,
+                    w/2+(i-6)*w*.23,h,fill='#15568a')
+            for i in (0,3,7,13,22):
+                header.create_line(0,horizon+i,w,horizon+i,fill='#15568a')
+            # Sombra azul desplazada, texto sólido cian y subtítulo.
+            size = max(10, min(30, int(w/32)))
+            self.logo_font.configure(size=-size)
+            while size > 10 and (self.logo_font.metrics("linespace") * len(glyphs) > h-35
+                                  or self.logo_font.measure(glyphs[0]) > w*0.69):
+                size -= 1
+                self.logo_font.configure(size=-size)
+            logo_h = self.logo_font.metrics('linespace') * len(glyphs)
+            logo_y = max(4, (h-30-logo_h)//2)
+            header.create_text(w/2+3,logo_y+3,text=ascii_logo,font=self.logo_font,
+                               fill='#1356a6',anchor='n',justify=tk.LEFT)
+            header.create_text(w/2,logo_y,text=ascii_logo,font=self.logo_font,
+                               fill='#16e8ff',anchor='n',justify=tk.LEFT)
+            subtitle = f"CONFIGURACIÓN INTELIGENTE · {os_name} Detectado"
+            header.create_rectangle(w*.20,h-27,w*.80,h-4,fill='#050c1d',outline='')
+            header.create_text(w/2,h-16,text=subtitle,font=('Segoe UI',11,'bold'),fill='#75ecff')
+            header.create_line(0,h-1,w,h-1,fill='#1197b9')
+
+        header.bind('<Configure>',center_logo)
+
+    def create_countdown_panel(self, parent):
+        panel, body = self.neon_frame(parent, '', height=91,
+                                      border='#ff518b', fill='#39142e')
+        panel.pack(fill=tk.X, padx=15, pady=(5, 4))
+        self.countdown_label = tk.Label(body, text="Inicio automático en 00:05",
+            bg='#39142e', fg='#6ff0ff', font=('Consolas', 16, 'bold'))
+        self.countdown_label.pack(pady=(0, 2))
+        for relx in (0.045, 0.955):
+            tk.Label(body, text="╱╱╱", bg='#39142e', fg='#a82a66',
+                     font=('Consolas', 23, 'bold')).place(relx=relx, rely=0.5, anchor='center')
+        controls = tk.Frame(body, bg='#39142e')
+        controls.pack()
+        self.countdown_pause_btn = tk.Button(controls, text="Ⅱ  Pausar",
+            command=self.toggle_countdown, bg='#0b2943', fg='#91f5ff',
+            activebackground='#164f6e', activeforeground='white', disabledforeground='#8aa1aa',
+            highlightthickness=1, highlightbackground='#36dfff', highlightcolor='#36dfff',
+            relief=tk.FLAT, bd=0, padx=19, pady=3, font=('Segoe UI',10,'bold'), cursor='hand2')
+        self.countdown_pause_btn.pack(side=tk.LEFT, padx=5)
+        self.countdown_cancel_btn = tk.Button(controls, text="×  Cancelar",
+            command=self.cancel_countdown, bg='#551a3b', fg='#ffb1cd',
+            activebackground='#82305a', activeforeground='white', disabledforeground='#aa879b',
+            highlightthickness=1, highlightbackground='#ff689e', highlightcolor='#ff689e',
+            relief=tk.FLAT, bd=0, padx=19, pady=3, font=('Segoe UI',10,'bold'), cursor='hand2')
+        self.countdown_cancel_btn.pack(side=tk.LEFT, padx=5)
+
+    def begin_countdown(self):
+        if self.countdown_state != "ready":
+            return
+        self.countdown_state = "running"
+        self.countdown_job = self.root.after(1000, self.countdown_tick)
+
+    def countdown_tick(self):
+        self.countdown_job = None
+        if self.countdown_state != "running":
+            return
+        self.countdown_remaining -= 1
+        self.countdown_label.config(text=f"Inicio automático en 00:{self.countdown_remaining:02d}")
+        if self.countdown_remaining <= 0:
+            self.countdown_state = "finished"
+            self.countdown_pause_btn.config(state='disabled')
+            self.countdown_cancel_btn.config(state='disabled')
+            self.countdown_label.config(text="Esperando confirmación")
+            self.config_completa()
+            self.countdown_label.config(text="Modo manual")
+        else:
+            self.countdown_job = self.root.after(1000, self.countdown_tick)
+
+    def toggle_countdown(self):
+        if self.countdown_state == "running":
+            if self.countdown_job is not None:
+                self.root.after_cancel(self.countdown_job)
+                self.countdown_job = None
+            self.countdown_state = "paused"
+            self.countdown_label.config(text=f"Pausado · 00:{self.countdown_remaining:02d}")
+            self.countdown_pause_btn.config(text="▶  Reanudar")
+        elif self.countdown_state == "paused":
+            self.countdown_state = "running"
+            self.countdown_pause_btn.config(text="Ⅱ  Pausar")
+            self.countdown_label.config(text=f"Inicio automático en 00:{self.countdown_remaining:02d}")
+            self.countdown_job = self.root.after(1000, self.countdown_tick)
+
+    def cancel_countdown(self):
+        if getattr(self, 'countdown_state', None) not in ("ready", "running", "paused"):
+            return
+        if self.countdown_job is not None:
+            self.root.after_cancel(self.countdown_job)
+            self.countdown_job = None
+        self.countdown_state = "cancelled"
+        self.countdown_label.config(text="Inicio automático cancelado · Modo manual")
+        self.safe_log("Inicio automático cancelado por el usuario.")
+        self.countdown_pause_btn.config(state='disabled')
+        self.countdown_cancel_btn.config(state='disabled')
+
+    def close_window(self):
+        if self.running:
+            messagebox.showinfo("J.D DEV", "Espera a que termine la configuración en curso.")
+            return
+        self.cancel_countdown()
+        self.root.destroy()
 
     def create_system_info(self, parent):
-        """Mostrar información del sistema"""
-        info_frame = tk.LabelFrame(
-            parent,
-            text="Información del Sistema",
-            bg=self.colors['accent'],
-            fg=self.colors['fg'],
-            font=('Segoe UI', 12, 'bold'),
-            padx=10,
-            pady=5
-        )
-        info_frame.pack(fill=tk.X, pady=10)
-
+        panel, body = self.neon_frame(parent, '▣  Información del Sistema', height=68)
+        panel.pack(fill=tk.X, padx=10, pady=(4, 3))
         info_text = (
-            f"Windows: {self.system_info.get('version', 'Desconocido')} | "
-            f"Build: {self.system_info.get('build', 'N/A')} | "
-            f"CPU: {self.system_info.get('cpu', 'Desconocido')} | "
-            f"Hilos: {self.system_info.get('threads', 'N/A')} | "
+            f"Windows: {self.system_info.get('version', 'Desconocido')}  |  "
+            f"Build: {self.system_info.get('build', 'N/A')}  |  "
+            f"CPU: {self.system_info.get('cpu', 'Desconocido')}  |  "
+            f"Hilos: {self.system_info.get('threads', 'N/A')}  |  "
             f"Admin: {'Sí' if self.is_admin else 'No'}"
         )
-
-        info_label = tk.Label(
-            info_frame,
-            text=info_text,
-            bg=self.colors['accent'],
-            fg=self.colors['text'],
-            font=('Consolas', 12)
-        )
-        info_label.pack(anchor=tk.W)
+        info_label = tk.Label(body, text=info_text, bg='#081c32', fg='#e0ecfa',
+                              font=('Segoe UI', 9), anchor=tk.W, justify=tk.LEFT)
+        info_label.pack(fill=tk.BOTH, expand=True)
+        body.bind('<Configure>', lambda event: info_label.config(wraplength=max(100,event.width-8)))
 
     def create_menu_panel(self, parent):
         self.advanced_visible = False
 
-        menu_frame = tk.LabelFrame(
-            parent,
-            text="Panel de Configuración",
-            bg=self.colors['accent'],
-            fg=self.colors['fg'],
-            font=('Segoe UI', int(12 * self.ui_scale), 'bold'),
-            padx=10,
-            pady=10,
-            width=360
-        )
-        menu_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 8))
-        menu_frame.pack_propagate(False)
+        panel, menu_frame = self.neon_frame(parent, '⚙  Panel de Configuración')
+        panel.grid(row=0, column=0, sticky='nsew', padx=(0,5))
 
         self._menu_button(
             menu_frame,
@@ -255,33 +376,16 @@ class JDDevWindowsSetup:
         self.create_advanced_options(self.adv_inner)
         self.advanced_popup.place_forget()
 
-        self._menu_button(menu_frame, "3. SALIR", self.root.quit, '#ff6b6b')
+        self._menu_button(menu_frame, "3. SALIR", self.close_window, '#ff6b6b')
 
     def create_console_panel(self, parent):
-        """Panel de consola/log"""
-        console_frame = tk.LabelFrame(
-            parent,
-            text="Registro de Actividad",
-            bg=self.colors['accent'],
-            fg=self.colors['fg'],
-            font=('Segoe UI', 12, 'bold'),
-            width=450,
-            padx=10,
-            pady=10
-        )
-        console_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        console_frame.pack_propagate(False)
-
+        panel, console_frame = self.neon_frame(parent, '>_  Registro de Actividad')
+        panel.grid(row=0, column=1, sticky='nsew', padx=(5,0))
         self.console = scrolledtext.ScrolledText(
-            console_frame,
-            bg='#000000',
-            fg='#00ff00',
-            font=('Consolas', 12),
-            wrap=tk.WORD,
-            state=tk.DISABLED,
-            padx=10,
-            pady=10
-        )
+            console_frame, bg='#02060d', fg='#35ff6b', insertbackground='#35ff6b',
+            font=('Consolas', 10), wrap=tk.WORD, state=tk.DISABLED,
+            padx=9, pady=8, relief=tk.FLAT, bd=0, highlightthickness=1,
+            highlightbackground='#1688a8', highlightcolor='#16d0ee')
         self.console.pack(fill=tk.BOTH, expand=True)
 
     def log(self, message, level="info"):
@@ -715,12 +819,14 @@ class JDDevWindowsSetup:
 
     def config_completa(self):
         """La configuración completa solo empieza tras una elección explícita."""
+        self.cancel_countdown()
         if self.running:
             messagebox.showinfo("J.D DEV", "Ya hay una configuración en curso.")
             return
         if not messagebox.askyesno(
             "J.D DEV · Aplicar configuración",
             "Se modificarán apariencia, Registro, opciones de rendimiento y servicios de telemetría. "
+            "La optimización actual incluye cambios de arranque y desactivación de UAC (reduce la seguridad). "
             "También se reiniciará Explorer. Guarda tu trabajo antes de continuar.\n\n"
             "Se intentará crear un punto de restauración; si falla, se detendrá el proceso.\n\n"
             "¿Quieres aplicar la configuración completa?",
@@ -766,11 +872,13 @@ class JDDevWindowsSetup:
             messagebox.showwarning("J.D DEV · Proceso detenido", "Revisa el registro antes de volver a intentar.", parent=self.root)
 
     def run_and_collapse(self, func):
+        self.cancel_countdown()
         if self.running:
             messagebox.showinfo("J.D DEV", "Espera a que termine la configuración en curso.")
             return
         if not messagebox.askyesno("J.D DEV · Aplicar ajuste",
                                   "Esta opción cambiará la configuración de Windows y puede reiniciar Explorer. "
+                                  "La opción de rendimiento modifica el arranque y desactiva UAC (reduce la seguridad). "
                                   "Guarda tu trabajo antes de continuar. ¿Quieres aplicarla?", default='no', parent=self.root):
             return
         if not self.crear_restauracion():
@@ -857,7 +965,12 @@ class JDDevWindowsSetup:
         rx = bx - self.root.winfo_rootx()
         ry = by - self.root.winfo_rooty()
 
-        self.advanced_popup.place(x=rx, y=ry + bh + 2, width=bw)
+        self.root.update_idletasks()
+        popup_h = self.advanced_popup.winfo_reqheight()
+        y = ry + bh + 2
+        if y + popup_h > self.root.winfo_height():
+            y = max(0, ry - popup_h - 2)
+        self.advanced_popup.place(x=rx, y=y, width=bw)
         self.advanced_popup.lift()
         self.btn_advanced.config(text="2. Configuración AVANZADA ▲")
         self.advanced_visible = True
@@ -868,29 +981,23 @@ class JDDevWindowsSetup:
     def _close_if_outside(self, event):
         if not self.advanced_visible:
             return
-        if not self.advanced_popup.winfo_containing(event.x_root, event.y_root):
-            self.toggle_advanced()
+        widget = self.root.winfo_containing(event.x_root, event.y_root)
+        while widget is not None:
+            if widget in (self.advanced_popup, self.btn_advanced):
+                return
+            widget = getattr(widget, 'master', None)
+        self.toggle_advanced()
 
     def _menu_button(self, parent, text, command, color):
-        btn = tk.Button(
-            parent,
-            text=text,
-            command=command,
-            bg=self.colors['bg'],
-            fg=color,
-            activebackground=color,
-            activeforeground=self.colors['bg'],
-            font=('Segoe UI', 12, 'bold'),
-            relief=tk.FLAT,
-            padx=14,
-            pady=6,
-            cursor='hand2'
-        )
-        btn.pack(fill=tk.X, pady=4)
-
-        btn.bind('<Enter>', lambda e, b=btn, c=color: b.config(bg=c, fg=self.colors['bg']))
-        btn.bind('<Leave>', lambda e, b=btn: b.config(bg=self.colors['bg'], fg=self.colors['fg']))
-
+        border = tk.Frame(parent, bg='#15cce9', padx=1, pady=1)
+        border.pack(fill=tk.X, pady=4)
+        btn = tk.Button(border, text=text, command=command,
+            bg='#0a2945', fg=color, activebackground='#174c6d',
+            activeforeground=color, font=('Segoe UI', 11, 'bold'),
+            relief=tk.FLAT, bd=0, padx=8, pady=8, cursor='hand2')
+        btn.pack(fill=tk.BOTH, expand=True)
+        btn.bind('<Enter>', lambda event: btn.config(bg='#174c6d'))
+        btn.bind('<Leave>', lambda event: btn.config(bg='#0a2945', fg=color))
         return btn
 
     def restart_explorer_with_delay(self, delay=5):
