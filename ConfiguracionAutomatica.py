@@ -155,14 +155,12 @@ class JDDevWindowsSetup:
                            highlightthickness=0, bd=0)
         header.pack(fill=tk.X, padx=3)
         self.header_canvas = header
+        # Half-blocks encode two square pixels per text row. Keep fixed spacing.
         glyphs = (
-            "    ██████        ████████            ████████    ██████████  ████  ████",
-            "      ████        ████  ████          ████  ████  ████        ████  ████",
-            "      ████        ████  ████          ████  ████  ████        ████  ████",
-            "      ████        ████  ████          ████  ████  ████████    ████  ████",
-            "████  ████        ████  ████          ████  ████  ████        ████  ████",
-            "████  ████  ████  ████  ████          ████  ████  ████          ██████  ",
-            "  ██████    ████  ████████            ████████    ██████████      ██    ",
+            "   ▀▀██      ██▀▀█▄        ██▀▀█▄   ██▀▀▀▀▀  ██   ██",
+            "     ██      ██   ██       ██   ██  ██▄▄▄▄   ██   ██",
+            "██   ██  ▄▄  ██  ▄█▀       ██  ▄█▀  ██        ▀█▄█▀ ",
+            " ▀▀▀▀▀   ▀▀  ▀▀▀▀▀         ▀▀▀▀▀    ▀▀▀▀▀▀▀     ▀   ",
         )
         ascii_logo = "\n".join(glyphs)
         self.logo_font = tkfont.Font(family='Consolas', size=-15, weight='bold')
@@ -211,15 +209,17 @@ class JDDevWindowsSetup:
             for i in (0,3,7,13,22):
                 header.create_line(0,horizon+i,w,horizon+i,fill='#15568a')
             # Sombra azul desplazada, texto sólido cian y subtítulo.
-            size = max(8, min(16, int(w/55)))
+            size = max(10, min(30, int(w/32)))
             self.logo_font.configure(size=-size)
-            while size > 8 and (self.logo_font.metrics("linespace") * len(glyphs) > h-35
-                                 or self.logo_font.measure(glyphs[0]) > w*0.67):
+            while size > 10 and (self.logo_font.metrics("linespace") * len(glyphs) > h-35
+                                  or self.logo_font.measure(glyphs[0]) > w*0.69):
                 size -= 1
                 self.logo_font.configure(size=-size)
-            header.create_text(w/2+3,8,text=ascii_logo,font=self.logo_font,
+            logo_h = self.logo_font.metrics('linespace') * len(glyphs)
+            logo_y = max(4, (h-30-logo_h)//2)
+            header.create_text(w/2+3,logo_y+3,text=ascii_logo,font=self.logo_font,
                                fill='#1356a6',anchor='n',justify=tk.LEFT)
-            header.create_text(w/2,5,text=ascii_logo,font=self.logo_font,
+            header.create_text(w/2,logo_y,text=ascii_logo,font=self.logo_font,
                                fill='#16e8ff',anchor='n',justify=tk.LEFT)
             subtitle = f"CONFIGURACIÓN INTELIGENTE · {os_name} Detectado"
             header.create_rectangle(w*.20,h-27,w*.80,h-4,fill='#050c1d',outline='')
