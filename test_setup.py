@@ -78,12 +78,56 @@ class SetupTests(unittest.TestCase):
         self.app.run_and_collapse(action)
         action.assert_called_once()
 
-    def test_no_hay_cuenta_regresiva_y_marca_completa(self):
-        self.assertNotIn('auto_start', SOURCE)
+    def test_marca_classic(self):
+        self.assertIn("ascii_logo", SOURCE)
         self.assertNotIn('PCMATIC', SOURCE.upper())
         self.assertNotIn('PC MATIC', SOURCE.upper())
-        self.assertIn('text="J.D DEV"', SOURCE)
+        self.assertIn("CLASSIC EDITION", SOURCE)
         self.assertIn('RECOMENDADO DESPUÉS DE REINSTALAR WINDOWS', SOURCE)
+
+    def setup_countdown(self):
+        self.app.countdown_state = 'ready'
+        self.app.countdown_remaining = 5
+        self.app.countdown_job = None
+        self.app.countdown_label = Mock()
+        self.app.countdown_pause_btn = Mock()
+        self.app.countdown_cancel_btn = Mock()
+        self.app.root.after = Mock(return_value='timer')
+        self.app.root.after_cancel = Mock()
+        self.app.begin_countdown()
+
+    def test_countdown_pause_resume(self):
+        self.setup_countdown()
+        self.app.countdown_tick()
+        self.assertEqual(self.app.countdown_remaining, 4)
+        self.app.toggle_countdown()
+        self.app.root.after_cancel.assert_called_once_with('timer')
+        self.assertEqual(self.app.countdown_state, 'paused')
+        self.app.toggle_countdown()
+        self.assertEqual(self.app.countdown_state, 'running')
+        self.assertEqual(self.app.countdown_remaining, 4)
+
+    def test_countdown_cancel(self):
+        self.setup_countdown()
+        self.app.cancel_countdown()
+        self.app.countdown_tick()
+        self.assertEqual(self.app.countdown_state, 'cancelled')
+        self.thread.assert_not_called()
+        self.dialogs.askyesno.assert_not_called()
+
+    def test_countdown_expiration_requires_confirmation(self):
+        self.setup_countdown()
+        for _ in range(5):
+            self.app.countdown_tick()
+        self.assertEqual(self.app.countdown_state, 'finished')
+        self.dialogs.askyesno.assert_called_once()
+        self.thread.assert_not_called()
+
+    def test_manual_action_cancels_countdown(self):
+        self.setup_countdown()
+        self.app.config_completa()
+        self.assertEqual(self.app.countdown_state, 'cancelled')
+        self.thread.assert_not_called()
 
 
 if __name__ == '__main__':

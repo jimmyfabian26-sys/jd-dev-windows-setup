@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-J.D DEV - Configuración Inteligente v4.0
+J.D DEV - Windows Setup v0.2.0 Classic Edition
 Aplicación Python para optimización de Windows 10/11
 """
 
@@ -34,7 +34,7 @@ logging.basicConfig(
 class JDDevWindowsSetup:
     def __init__(self, root):
         self.root = root
-        self.root.title("J.D DEV - Configuración Inteligente")
+        self.root.title("J.D DEV - Windows Setup · Classic Edition")
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
 
@@ -51,8 +51,12 @@ class JDDevWindowsSetup:
         self.root.geometry(self.window_size)
         self.root.tk.call('tk', 'scaling', self.ui_scale)
         self.root.configure(bg='#0a192f')
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
+        self.root.minsize(780, 560)
         self.running = False
+        self.countdown_remaining = 5
+        self.countdown_state = "ready"
+        self.countdown_job = None
 
         # Variables de estado
         self.is_admin = self.check_admin()
@@ -69,6 +73,9 @@ class JDDevWindowsSetup:
         logging.info(f"Aplicación iniciada - Windows 11: {self.is_windows_11}")
         if not self.is_admin:
             self.request_admin()
+        else:
+            self.begin_countdown()
+        self.root.protocol("WM_DELETE_WINDOW", self.close_window)
 
     def setup_styles(self):
         """Configurar estilos modernos"""
@@ -105,9 +112,10 @@ class JDDevWindowsSetup:
         self.create_header(main_frame)
         self.create_usage_notice(main_frame)
         self.create_system_info(main_frame)
+        self.create_countdown_panel(main_frame)
 
         content_frame = tk.Frame(main_frame, bg=self.colors['bg'])
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=20)
+        content_frame.pack(fill=tk.BOTH, expand=True, pady=8)
 
         self.create_menu_panel(content_frame)
         self.create_console_panel(content_frame)
@@ -145,22 +153,100 @@ class JDDevWindowsSetup:
     def create_header(self, parent):
         """Crear header con logo"""
         header = tk.Frame(parent, bg=self.colors['bg'])
-        header.pack(fill=tk.X, pady=(0, 20))
+        header.pack(fill=tk.X, pady=(0, 5))
 
+        ascii_logo = "\n".join((
+            r"     _   ____      ____  _____ __     __",
+            r"    | | |  _ \    |  _ \| ____|\ \   / /",
+            r" _  | | | | | |   | | | |  _|   \ \ / /",
+            r"| |_| |_| |_| |   | |_| | |___   \ V /",
+            r" \___/(_)____/    |____/|_____|   \_/",
+        ))
         logo_label = tk.Label(
-            header, text="J.D DEV", bg=self.colors['bg'],
-            fg=self.colors['success'], font=('Segoe UI', int(34 * self.ui_scale), 'bold')
+            header, text=ascii_logo, bg=self.colors['bg'],
+            fg=self.colors['success'], font=('Consolas', max(9, int(12 * self.ui_scale)), 'bold'),
+            justify=tk.LEFT
         )
         logo_label.pack()
 
         subtitle = tk.Label(
             header,
-            text=f"WINDOWS SETUP · {'Windows 11' if self.is_windows_11 else 'Windows 10'} Detectado",
+            text=f"CLASSIC EDITION · WINDOWS SETUP · {'Windows 11' if self.is_windows_11 else 'Windows 10'} Detectado",
             bg=self.colors['bg'],
             fg=self.colors['fg'],
             font=('Segoe UI', 12)
         )
         subtitle.pack()
+
+    def create_countdown_panel(self, parent):
+        panel = tk.Frame(parent, bg=self.colors['accent'], padx=10, pady=5)
+        panel.pack(fill=tk.X, pady=(0, 5))
+        self.countdown_label = tk.Label(
+            panel, text="Inicio automático en 00:05", bg=self.colors['accent'],
+            fg=self.colors['fg'], font=('Consolas', 13, 'bold'))
+        self.countdown_label.pack(side=tk.LEFT)
+        self.countdown_cancel_btn = tk.Button(
+            panel, text="Cancelar", command=self.cancel_countdown,
+            bg=self.colors['bg'], fg=self.colors['warning'])
+        self.countdown_cancel_btn.pack(side=tk.RIGHT, padx=4)
+        self.countdown_pause_btn = tk.Button(
+            panel, text="Pausar", command=self.toggle_countdown,
+            bg=self.colors['bg'], fg='#ffd700')
+        self.countdown_pause_btn.pack(side=tk.RIGHT, padx=4)
+
+    def begin_countdown(self):
+        if self.countdown_state != "ready":
+            return
+        self.countdown_state = "running"
+        self.countdown_job = self.root.after(1000, self.countdown_tick)
+
+    def countdown_tick(self):
+        self.countdown_job = None
+        if self.countdown_state != "running":
+            return
+        self.countdown_remaining -= 1
+        self.countdown_label.config(text=f"Inicio automático en 00:{self.countdown_remaining:02d}")
+        if self.countdown_remaining <= 0:
+            self.countdown_state = "finished"
+            self.countdown_pause_btn.config(state='disabled')
+            self.countdown_cancel_btn.config(state='disabled')
+            self.countdown_label.config(text="Esperando confirmación")
+            self.config_completa()
+            self.countdown_label.config(text="Modo manual")
+        else:
+            self.countdown_job = self.root.after(1000, self.countdown_tick)
+
+    def toggle_countdown(self):
+        if self.countdown_state == "running":
+            if self.countdown_job is not None:
+                self.root.after_cancel(self.countdown_job)
+                self.countdown_job = None
+            self.countdown_state = "paused"
+            self.countdown_label.config(text=f"Pausado · 00:{self.countdown_remaining:02d}")
+            self.countdown_pause_btn.config(text="Reanudar")
+        elif self.countdown_state == "paused":
+            self.countdown_state = "running"
+            self.countdown_pause_btn.config(text="Pausar")
+            self.countdown_label.config(text=f"Inicio automático en 00:{self.countdown_remaining:02d}")
+            self.countdown_job = self.root.after(1000, self.countdown_tick)
+
+    def cancel_countdown(self):
+        if getattr(self, 'countdown_state', None) not in ("ready", "running", "paused"):
+            return
+        if self.countdown_job is not None:
+            self.root.after_cancel(self.countdown_job)
+            self.countdown_job = None
+        self.countdown_state = "cancelled"
+        self.countdown_label.config(text="Inicio cancelado · Modo manual")
+        self.countdown_pause_btn.config(state='disabled')
+        self.countdown_cancel_btn.config(state='disabled')
+
+    def close_window(self):
+        if self.running:
+            messagebox.showinfo("J.D DEV", "Espera a que termine la configuración en curso.")
+            return
+        self.cancel_countdown()
+        self.root.destroy()
 
     def create_system_info(self, parent):
         """Mostrar información del sistema"""
@@ -255,7 +341,7 @@ class JDDevWindowsSetup:
         self.create_advanced_options(self.adv_inner)
         self.advanced_popup.place_forget()
 
-        self._menu_button(menu_frame, "3. SALIR", self.root.quit, '#ff6b6b')
+        self._menu_button(menu_frame, "3. SALIR", self.close_window, '#ff6b6b')
 
     def create_console_panel(self, parent):
         """Panel de consola/log"""
@@ -715,12 +801,14 @@ class JDDevWindowsSetup:
 
     def config_completa(self):
         """La configuración completa solo empieza tras una elección explícita."""
+        self.cancel_countdown()
         if self.running:
             messagebox.showinfo("J.D DEV", "Ya hay una configuración en curso.")
             return
         if not messagebox.askyesno(
             "J.D DEV · Aplicar configuración",
             "Se modificarán apariencia, Registro, opciones de rendimiento y servicios de telemetría. "
+            "La optimización actual incluye cambios de arranque y desactivación de UAC (reduce la seguridad). "
             "También se reiniciará Explorer. Guarda tu trabajo antes de continuar.\n\n"
             "Se intentará crear un punto de restauración; si falla, se detendrá el proceso.\n\n"
             "¿Quieres aplicar la configuración completa?",
@@ -766,11 +854,13 @@ class JDDevWindowsSetup:
             messagebox.showwarning("J.D DEV · Proceso detenido", "Revisa el registro antes de volver a intentar.", parent=self.root)
 
     def run_and_collapse(self, func):
+        self.cancel_countdown()
         if self.running:
             messagebox.showinfo("J.D DEV", "Espera a que termine la configuración en curso.")
             return
         if not messagebox.askyesno("J.D DEV · Aplicar ajuste",
                                   "Esta opción cambiará la configuración de Windows y puede reiniciar Explorer. "
+                                  "La opción de rendimiento modifica el arranque y desactiva UAC (reduce la seguridad). "
                                   "Guarda tu trabajo antes de continuar. ¿Quieres aplicarla?", default='no', parent=self.root):
             return
         if not self.crear_restauracion():

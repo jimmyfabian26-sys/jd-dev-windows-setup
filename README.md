@@ -39,6 +39,10 @@ Una interfaz gráfica para aplicar ajustes elegidos por el usuario, con confirma
 - [Compilar y ejecutar pruebas](#️-compilar-el-ejecutable)
 - [Estado y próximas mejoras](#️-estado-del-proyecto-y-próximas-mejoras)
 
+## Classic Edition (v0.2.0 en desarrollo)
+
+Regresa el encabezado ASCII con la marca J.D DEV y la cuenta regresiva de cinco segundos con pausa, reanudación y cancelación. Al finalizar el contador se abre la confirmación; no se modificará Windows sin aceptar. La versión publicada v0.1.0 permanece disponible. El flujo de GitHub Actions genera un artefacto EXE de prueba para esta rama.
+
 ## 🛠️ Tecnologías utilizadas
 
 | Área | Herramienta |
@@ -66,7 +70,7 @@ J.D DEV Windows Setup reúne en una sola aplicación opciones de apariencia y aj
 - Ajustes de rendimiento y opciones de telemetría mediante Registro y servicios.
 - Registro de operaciones, información del equipo y progreso.
 - Punto de restauración previo a la ejecución de ajustes.
-- Ejecución manual: abrir la aplicación no inicia la configuración.
+- Cuenta regresiva al abrir la aplicación: se puede pausar, reanudar o cancelar. Al terminar, se solicita confirmación.
 - Confirmación previa para la configuración completa y para opciones individuales.
 - El proceso se detiene si no se puede crear el punto de restauración.
 - El programa no reinicia Windows automáticamente; el usuario decide cuándo hacerlo desde Windows.

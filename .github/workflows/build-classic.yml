@@ -1,0 +1,25 @@
+name: Compilar Classic Edition
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -p test_setup.py -v
+      - run: python -m pip install pyinstaller
+      - run: python -m PyInstaller --clean --noconfirm --onefile --windowed --uac-admin --name J.D-DEV-Windows-Setup-Classic --icon engrane.ico ConfiguracionAutomatica.py
+      - shell: pwsh
+        run: |
+          $exe = 'dist/J.D-DEV-Windows-Setup-Classic.exe'
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  J.D-DEV-Windows-Setup-Classic.exe" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: J.D-DEV-Windows-Setup-Classic-x64
+          path: dist/
+          if-no-files-found: error
