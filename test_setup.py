@@ -3,6 +3,7 @@ import ast
 from pathlib import Path
 from types import SimpleNamespace
 import threading
+import sys
 import unittest
 from unittest.mock import Mock, patch
 
@@ -84,7 +85,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn("center_logo", SOURCE)
         self.assertNotIn('PCMATIC', SOURCE.upper())
         self.assertNotIn('PC MATIC', SOURCE.upper())
-        self.assertIn("CLASSIC EDITION", SOURCE)
+        self.assertIn("CLASSIC EDITION", SOURCE.upper())
         self.assertIn('RECOMENDADO DESPUÉS DE REINSTALAR WINDOWS', SOURCE)
 
     def setup_countdown(self):
@@ -130,6 +131,46 @@ class SetupTests(unittest.TestCase):
         self.app.config_completa()
         self.assertEqual(self.app.countdown_state, 'cancelled')
         self.thread.assert_not_called()
+
+    def test_cyberpunk_widgets_present(self):
+        for marker in ('neon_frame', 'header_canvas', '#ff518b', '#35ff6b'):
+            self.assertIn(marker, SOURCE)
+
+
+@unittest.skipUnless(sys.platform == 'win32', 'Interfaz nativa de Windows')
+class CyberInterfaceTests(unittest.TestCase):
+    def test_interface_controls_without_system_changes(self):
+        import tkinter as tk
+        from ConfiguracionAutomatica import JDDevWindowsSetup
+        try:
+            root = tk.Tk()
+        except tk.TclError as exc:
+            self.skipTest(f'No hay escritorio gráfico disponible: {exc}')
+        try:
+            with patch.object(JDDevWindowsSetup, 'check_admin', return_value=True), \
+                 patch.object(JDDevWindowsSetup, 'get_system_info', return_value={'version':'22H2','build':'19045','cpu':'CPU simulada','threads':4}), \
+                 patch.object(JDDevWindowsSetup, 'check_windows_11', return_value=False), \
+                 patch.object(JDDevWindowsSetup, 'crear_restauracion') as restore:
+                app = JDDevWindowsSetup(root)
+                root.geometry('960x660')
+                root.update()
+                self.assertGreater(app.header_canvas.winfo_width(), 100)
+                self.assertGreater(app.console.winfo_height(), 60)
+                app.countdown_pause_btn.invoke()
+                self.assertEqual(app.countdown_state, 'paused')
+                app.countdown_pause_btn.invoke()
+                self.assertEqual(app.countdown_state, 'running')
+                app.countdown_cancel_btn.invoke()
+                root.update()
+                self.assertEqual(app.countdown_state, 'cancelled')
+                app.btn_advanced.invoke()
+                root.update()
+                self.assertTrue(app.advanced_visible)
+                app.btn_advanced.invoke()
+                self.assertFalse(app.advanced_visible)
+                restore.assert_not_called()
+        finally:
+            root.destroy()
 
 
 if __name__ == '__main__':
