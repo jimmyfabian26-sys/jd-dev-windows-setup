@@ -80,6 +80,8 @@ class SetupTests(unittest.TestCase):
 
     def test_marca_classic(self):
         self.assertIn("ascii_logo", SOURCE)
+        self.assertIn("██", SOURCE)
+        self.assertIn("center_logo", SOURCE)
         self.assertNotIn('PCMATIC', SOURCE.upper())
         self.assertNotIn('PC MATIC', SOURCE.upper())
         self.assertIn("CLASSIC EDITION", SOURCE)

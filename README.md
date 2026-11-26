@@ -41,7 +41,7 @@ Una interfaz gráfica para aplicar ajustes elegidos por el usuario, con confirma
 
 ## Classic Edition (v0.2.0 en desarrollo)
 
-Regresa el encabezado ASCII con la marca J.D DEV y la cuenta regresiva de cinco segundos con pausa, reanudación y cancelación. Al finalizar el contador se abre la confirmación; no se modificará Windows sin aceptar. La versión publicada v0.1.0 permanece disponible. El flujo de GitHub Actions genera un artefacto EXE de prueba para esta rama.
+Regresa el encabezado de texto Unicode en bloques con sombra azul y marca J.D DEV y la cuenta regresiva de cinco segundos con pausa, reanudación y cancelación. Al finalizar el contador se abre la confirmación; no se modificará Windows sin aceptar. La versión publicada v0.1.0 permanece disponible. El flujo de GitHub Actions genera un artefacto EXE de prueba para esta rama.
 
 ## 🛠️ Tecnologías utilizadas
 

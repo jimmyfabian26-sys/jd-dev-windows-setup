@@ -7,6 +7,7 @@ Aplicación Python para optimización de Windows 10/11
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+from tkinter import font as tkfont
 import subprocess
 import os
 import sys
@@ -106,13 +107,13 @@ class JDDevWindowsSetup:
 
     def create_ui(self):
         main_frame = tk.Frame(self.root, bg=self.colors['bg'])
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=10)
         self.main_frame = main_frame
 
         self.create_header(main_frame)
-        self.create_usage_notice(main_frame)
-        self.create_system_info(main_frame)
         self.create_countdown_panel(main_frame)
+        self.create_system_info(main_frame)
+        self.create_usage_notice(main_frame)
 
         content_frame = tk.Frame(main_frame, bg=self.colors['bg'])
         content_frame.pack(fill=tk.BOTH, expand=True, pady=8)
@@ -128,7 +129,7 @@ class JDDevWindowsSetup:
             length=860,
             mode='determinate'
         )
-        self.progress.pack(pady=10)
+        self.progress.pack(fill=tk.X, pady=(5, 4))
 
         self.status_label = tk.Label(
             main_frame,
@@ -142,7 +143,7 @@ class JDDevWindowsSetup:
 
     def create_usage_notice(self, parent):
         notice = tk.Frame(parent, bg=self.colors['accent'], padx=14, pady=10)
-        notice.pack(fill=tk.X, pady=(0, 12))
+        notice.pack(fill=tk.X, pady=(0, 3))
         tk.Label(notice, text="RECOMENDADO DESPUÉS DE REINSTALAR WINDOWS",
                  bg=self.colors['accent'], fg=self.colors['fg'],
                  font=('Segoe UI', 10, 'bold')).pack(anchor=tk.W)
@@ -155,19 +156,32 @@ class JDDevWindowsSetup:
         header = tk.Frame(parent, bg=self.colors['bg'])
         header.pack(fill=tk.X, pady=(0, 5))
 
+        # Unicode block lettering, not an image; equal-width rows in Consolas.
         ascii_logo = "\n".join((
-            r"     _   ____      ____  _____ __     __",
-            r"    | | |  _ \    |  _ \| ____|\ \   / /",
-            r" _  | | | | | |   | | | |  _|   \ \ / /",
-            r"| |_| |_| |_| |   | |_| | |___   \ V /",
-            r" \___/(_)____/    |____/|_____|   \_/",
+            "    ██████        ████████            ████████    ██████████  ████  ████",
+            "      ████        ████  ████          ████  ████  ████        ████  ████",
+            "      ████        ████  ████          ████  ████  ████        ████  ████",
+            "      ████        ████  ████          ████  ████  ████████    ████  ████",
+            "████  ████        ████  ████          ████  ████  ████        ████  ████",
+            "████  ████  ████  ████  ████          ████  ████  ████          ██████  ",
+            "  ██████    ████  ████████            ████████    ██████████      ██    ",
         ))
-        logo_label = tk.Label(
-            header, text=ascii_logo, bg=self.colors['bg'],
-            fg=self.colors['success'], font=('Consolas', max(9, int(12 * self.ui_scale)), 'bold'),
-            justify=tk.LEFT
-        )
-        logo_label.pack()
+        logo_font = tkfont.Font(family="Consolas", size=-14, weight="bold")
+        logo_height = logo_font.metrics("linespace") * 7 + 8
+        logo = tk.Canvas(header, bg='#050c19', height=logo_height,
+                         highlightthickness=0, bd=0)
+        logo.pack(fill=tk.X)
+        shadow = logo.create_text(0, 6, text=ascii_logo, font=logo_font,
+                                  fill='#1854a8', anchor='n', justify=tk.LEFT)
+        face = logo.create_text(0, 3, text=ascii_logo, font=logo_font,
+                                fill='#00d9ff', anchor='n', justify=tk.LEFT)
+
+        def center_logo(event):
+            center = event.width / 2
+            logo.coords(shadow, center + 3, 6)
+            logo.coords(face, center, 3)
+
+        logo.bind("<Configure>", center_logo)
 
         subtitle = tk.Label(
             header,
@@ -179,20 +193,25 @@ class JDDevWindowsSetup:
         subtitle.pack()
 
     def create_countdown_panel(self, parent):
-        panel = tk.Frame(parent, bg=self.colors['accent'], padx=10, pady=5)
-        panel.pack(fill=tk.X, pady=(0, 5))
+        panel = tk.Frame(parent, bg='#39162d', padx=8, pady=4,
+                         highlightthickness=1, highlightbackground='#ff527f')
+        panel.pack(fill=tk.X, pady=(3, 5))
         self.countdown_label = tk.Label(
-            panel, text="Inicio automático en 00:05", bg=self.colors['accent'],
-            fg=self.colors['fg'], font=('Consolas', 13, 'bold'))
-        self.countdown_label.pack(side=tk.LEFT)
-        self.countdown_cancel_btn = tk.Button(
-            panel, text="Cancelar", command=self.cancel_countdown,
-            bg=self.colors['bg'], fg=self.colors['warning'])
-        self.countdown_cancel_btn.pack(side=tk.RIGHT, padx=4)
+            panel, text="Inicio automático en 00:05", bg='#39162d',
+            fg='#00d9ff', font=('Consolas', 15, 'bold'))
+        self.countdown_label.pack()
+        controls = tk.Frame(panel, bg='#39162d')
+        controls.pack(pady=(2, 0))
         self.countdown_pause_btn = tk.Button(
-            panel, text="Pausar", command=self.toggle_countdown,
-            bg=self.colors['bg'], fg='#ffd700')
-        self.countdown_pause_btn.pack(side=tk.RIGHT, padx=4)
+            controls, text="Pausar", command=self.toggle_countdown,
+            bg='#112240', fg='#64ffda', activebackground='#16415e',
+            activeforeground='#ffffff', relief=tk.FLAT, padx=20, cursor='hand2')
+        self.countdown_pause_btn.pack(side=tk.LEFT, padx=4)
+        self.countdown_cancel_btn = tk.Button(
+            controls, text="Cancelar", command=self.cancel_countdown,
+            bg='#551c3a', fg='#ff98b1', activebackground='#702247',
+            activeforeground='#ffffff', relief=tk.FLAT, padx=20, cursor='hand2')
+        self.countdown_cancel_btn.pack(side=tk.LEFT, padx=4)
 
     def begin_countdown(self):
         if self.countdown_state != "ready":
@@ -237,7 +256,8 @@ class JDDevWindowsSetup:
             self.root.after_cancel(self.countdown_job)
             self.countdown_job = None
         self.countdown_state = "cancelled"
-        self.countdown_label.config(text="Inicio cancelado · Modo manual")
+        self.countdown_label.config(text="Inicio automático cancelado · Modo manual")
+        self.safe_log("Inicio automático cancelado por el usuario.")
         self.countdown_pause_btn.config(state='disabled')
         self.countdown_cancel_btn.config(state='disabled')
 
